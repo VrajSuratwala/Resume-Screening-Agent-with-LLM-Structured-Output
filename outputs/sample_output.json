@@ -1,0 +1,10 @@
+{
+    "match_score": 0,
+    "matched_skills": [],
+    "missing_skills": [
+        "Python",
+        "Backend development"
+    ],
+    "summary": "No relevant experience",
+    "recommendation": "Not a Fit"
+}
