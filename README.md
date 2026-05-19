@@ -214,17 +214,17 @@ Sample results:
 **Test 1 — Strong Match**
 - JD: Python Backend Developer with Flask, SQL, REST APIs
 - Resume: Python developer with Flask, SQL, REST APIs
-- Expected: 85–95 | Actual: 91 | ✅ PASS
+- Expected: 85–95 | Actual: 90 | ✅ PASS
 
 **Test 5 — Partial Match**
 - JD: Frontend React Developer
 - Resume: Frontend developer with HTML, CSS, JavaScript
-- Expected: 60–72 | Actual: 65 | ✅ PASS
+- Expected: 60–72 | Actual: 60 | ✅ PASS
 
 **Test 10 — Weak Match**
 - JD: Backend Python Developer
 - Resume: Graphic designer with Canva and UI portfolio
-- Expected: 10–30 | Actual: 18 | ✅ PASS
+- Expected: 10–30 | Actual: 0 |  FAIL
 
 Full results with JSON outputs are available in `test_runs/`.
 
