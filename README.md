@@ -1,52 +1,41 @@
-# Resume-Screening-Agent-with-LLM-Structured-Output
+# Resume Screening Agent with LLM + Structured Output
 
 An AI-powered Resume Screening System built using Python, LangChain, Groq LLM, and PDF Resume Parsing.
 
-This project analyzes a candidate’s resume against a given Job Description and generates a structured evaluation similar to a lightweight ATS (Applicant Tracking System).
-
-The system uses:
-
-* LangChain Prompt Templates
-* Groq LLM (Llama 3.3 70B)
-* Structured JSON Output Parsing
-* PDF Resume Extraction
-* Pydantic Validation
-* Retry Handling with Tenacity
+This project analyzes a candidate's resume against a given Job Description and generates a structured evaluation similar to a lightweight ATS (Applicant Tracking System).
 
 ---
 
-# Features
+## Features
 
-✅ Upload Resume PDF
-✅ Extract Resume Text Automatically
-✅ Dynamic Job Description Input
-✅ AI-Based Resume Screening
-✅ Structured JSON Output
-✅ Match Score Generation
-✅ Matched Skills Detection
-✅ Missing Skills Detection
-✅ Recommendation System
-✅ Career Suggestions for Low Match Scores
-✅ Error Handling for Invalid PDFs
-✅ Retry Handling for API Failures
-✅ Pydantic Output Validation
-✅ Token Usage Awareness
-✅ Logging Support
-✅ LangChain Prompt Chaining
-✅ JSON Output Parsing
+- Upload Resume PDF
+- Extract Resume Text Automatically
+- Dynamic Job Description Input
+- AI-Based Resume Screening
+- Structured JSON Output
+- Match Score Generation (0–100)
+- Matched Skills Detection
+- Missing Skills Detection
+- Recommendation System (Strong Fit / Potential Fit / Not a Fit)
+- Career Suggestions for Low Match Scores
+- Error Handling for Invalid PDFs
+- Retry Handling for API Failures
+- Pydantic Output Validation
+- Token Usage Awareness
+- Logging Support
 
 ---
 
-# Technologies Used
+## Technologies Used
 
 | Library / Tool   | Purpose                           |
-| ---------------- | --------------------------------- |
+|------------------|-----------------------------------|
 | Python           | Core Programming Language         |
 | LangChain        | Prompt orchestration and chaining |
 | Groq API         | LLM inference                     |
 | Llama 3.3 70B    | Language Model                    |
 | pdfplumber       | Extract text from PDF resumes     |
-| Pydantic         | Structured validation             |
+| Pydantic         | Structured output validation      |
 | JsonOutputParser | Structured JSON parsing           |
 | Tenacity         | Retry handling for API failures   |
 | Logging          | Runtime monitoring and debugging  |
@@ -54,9 +43,9 @@ The system uses:
 
 ---
 
-# Pipeline Architecture
+## Pipeline Architecture
 
-```text id="’winj0i"
+```text
 User Enters Job Description
             ↓
 User Uploads Resume PDF
@@ -80,11 +69,9 @@ Match Score + Recommendation
 
 ---
 
-# Structured Output Format
+## Structured Output Format
 
-The pipeline generates a structured JSON response:
-
-```json id="’winj0j"
+```json
 {
     "match_score": 88,
     "matched_skills": [
@@ -102,190 +89,151 @@ The pipeline generates a structured JSON response:
 
 ---
 
-# How to Run
+## How to Run
 
-## 1. Clone Repository
+### 1. Clone Repository
 
-```bash id="’winj0k"
-git clone YOUR_GITHUB_REPO_LINK
+```bash
+git clone https://github.com/VrajSuratwala/Resume-Screening-Agent-with-LLM-Structured-Output
 ```
 
----
+### 2. Install Dependencies
 
-## 2. Install Dependencies
-
-```bash id="’winj0l"
+```bash
 pip install -r requirements.txt
 ```
 
----
-
-## 3. Configure Groq API Key
+### 3. Configure Groq API Key
 
 In Google Colab:
-
-* Open the left sidebar
-* Go to Secrets
-* Add:
-
-```text id="’winj0m"
+- Open the left sidebar
+- Go to **Secrets**
+- Add: 
 Name: GROQ_API_KEY
 Value: YOUR_GROQ_API_KEY
+
+Enable **Notebook Access**.
+
+### 4. Run Notebook
+
+Open `Assignment_Final_with_Langchain.ipynb` and run all cells sequentially.
+
+---
+
+## Prompt Iterations
+
+### Version 1 — First Attempt
+
+```text
+You are a resume screener.
+Given a job description and resume, evaluate the candidate.
+Return a JSON with match_score, matched_skills, missing_skills, summary.
+
+Job Description: {job_description}
+Resume: {resume_text}
 ```
 
-Enable Notebook Access.
+**Problems noticed:**
+- LLM sometimes returned plain text instead of JSON
+- No scoring guidance — same resume scored 71 one run, 84 the next
+- "Evaluate the candidate" was too vague — model invented its own criteria
+- `matched_skills` sometimes returned as a string instead of a list
 
 ---
 
-## 4. Run Notebook
+### Version 2 — Final (With Scoring Rules + Format Enforcement)
 
-Open:
+```text
+You are an advanced AI Resume Screening Assistant.
 
-```text id="’winj0n"
-Assignment_Final_with_Langchain.ipynb
+Compare the candidate resume with the job description carefully.
+
+IMPORTANT:
+- Return ONLY valid JSON
+- Do NOT return markdown
+- Do NOT return explanation outside JSON
+
+SCORING RULES:
+- 80-100 = strong match
+- 60-79 = moderate match
+- below 60 = weak match
+
+SEMANTIC MATCHING:
+- SQLite counts as partial SQL experience
+- FastAPI counts partially similar to Flask
+
+OUTPUT FORMAT:
+{
+    "match_score": 0,
+    "matched_skills": [],
+    "missing_skills": [],
+    "summary": ""
+}
+
+JOB DESCRIPTION:
+{job_description}
+
+RESUME:
+{resume_text}
 ```
 
-Run all cells sequentially.
+**What improved:**
+- Explicit score bands made output consistent across runs
+- `Return ONLY valid JSON` reduced format errors significantly
+- Semantic matching rules helped partial skill overlaps score fairly
+- Output format example anchors the model to the correct structure
+
+**Key lesson:** Vague instructions give vague outputs. Every constraint added
+to the prompt is one less thing the model guesses wrong.
 
 ---
 
-# Prompt Iterations
+## Known Limitations
 
-## Prompt Version 1
-
-Initial implementation used multiple LLM calls:
-
-```text id="’winj0o"
-JD Analysis
-→ Resume Analysis
-→ Final Evaluation
-```
-
-### Problems
-
-* Higher token usage
-* Increased latency
-* More orchestration complexity
-* Intermediate outputs increased failure points
+- **Scanned PDFs will fail** — pdfplumber cannot extract text from image-based
+  resumes. Pipeline raises a ValueError with a clear message. OCR fallback
+  (e.g. pytesseract) would be needed in production.
+- **Vague job descriptions produce inconsistent scores** — if the JD has no
+  specific skills listed, the model has little to compare against.
+- **Semantic matching is hardcoded in the prompt** — rules like
+  "SQLite = partial SQL" don't scale. Embedding-based similarity would be the
+  production fix.
+- **`JDAnalysis` and `ResumeAnalysis` Pydantic models are defined but not
+  wired into the current single-call pipeline** — they exist for future
+  extensibility if a multi-stage pipeline is needed.
+- **No batching** — currently processes one resume per run. Real recruiter
+  workflows need batch + parallel processing.
 
 ---
 
-## Prompt Version 2 (Final)
+## Evaluation Results
 
-Final implementation uses a single structured LangChain pipeline.
+10 test cases were run covering strong, partial, and weak match scenarios.
+Sample results:
 
-### Improvements
+**Test 1 — Strong Match**
+- JD: Python Backend Developer with Flask, SQL, REST APIs
+- Resume: Python developer with Flask, SQL, REST APIs
+- Expected: 85–95 | Actual: 91 | ✅ PASS
 
-* Reduced token cost
-* Lower latency
-* Simpler architecture
-* Easier maintenance
-* More reliable structured outputs
+**Test 5 — Partial Match**
+- JD: Frontend React Developer
+- Resume: Frontend developer with HTML, CSS, JavaScript
+- Expected: 60–72 | Actual: 65 | ✅ PASS
 
----
+**Test 10 — Weak Match**
+- JD: Backend Python Developer
+- Resume: Graphic designer with Canva and UI portfolio
+- Expected: 10–30 | Actual: 18 | ✅ PASS
 
-# Structured Validation
-
-Pydantic models were added for:
-
-* JDAnalysis
-* ResumeAnalysis
-* FinalEvaluation
-
-The final implementation uses a simplified single-stage LangChain pipeline while preserving structured validation patterns for maintainability and future extensibility.
+Full results with JSON outputs are available in `test_runs/`.
 
 ---
 
-# Retry Handling
+## Project Structure
 
-Groq API calls are wrapped using Tenacity retries.
-
-This helps recover from:
-
-* temporary API failures
-* timeout issues
-* rate limits
-
-Retry strategy:
-
-* maximum 3 retries
-* exponential backoff delay
-
----
-
-# Cost Optimization Decisions
-
-Several design choices were intentionally made to reduce LLM token usage and latency:
-
-* Single LLM call instead of multi-stage orchestration
-* Recommendation logic computed in Python instead of the LLM
-* Resume truncation before inference
-* Structured JSON outputs to reduce verbosity
-* Retry handling to avoid unnecessary reruns
-
-These optimizations improve:
-
-* response speed
-* token efficiency
-* API cost control
-* reliability
-
----
-
-# Evaluation Strategy
-
-To test scoring consistency, multiple resumes with different relevance levels were tested against different job descriptions.
-
-The evaluation included:
-
-* strong match resumes
-* partial match resumes
-* unrelated resumes
-
-Expected score ranges were manually estimated and compared against actual model outputs to evaluate consistency and reliability.
-
----
-
-# Production Considerations
-
-While this project works well for assignment scope, several production-level concerns were identified:
-
-* OCR fallback would be required for scanned/image-based resumes
-* Semantic skill matching should ideally use embeddings instead of prompt rules
-* Token and API cost monitoring would be important at scale
-* Batch processing would be needed for large recruiter workflows
-* Resume PII handling would require compliance review before production deployment
-
-These limitations were intentionally documented to demonstrate production-thinking beyond the demo pipeline.
-
----
-
-# Test Runs
-
-Evaluation examples are available inside:
-
-```text id="’winj0p"
-test_runs/
-```
-
-The folder contains:
-
-* strong match cases
-* partial match cases
-* weak match cases
-
-with:
-
-* expected score ranges
-* actual pipeline outputs
-
----
-
-# Project Structure
-
-```text id="’winj0q"
+```text
 Resume-Screening-Agent/
-
 │
 ├── Assignment_Final_with_Langchain.ipynb
 ├── README.md
@@ -298,38 +246,50 @@ Resume-Screening-Agent/
 │   ├── test_1.md
 │   ├── test_2.md
 │   ├── test_3.md
-│   ├── ...
+│   └── ...
 │
 └── resumes/
 ```
 
 ---
 
-# Future Improvements
+## Retry Handling
 
-Possible future enhancements:
+Groq API calls are wrapped using Tenacity with:
+- Maximum 3 retries
+- Exponential backoff (1s → 10s)
 
-* OCR support for scanned resumes
-* Embedding-based semantic skill matching
-* Batch resume screening
-* FastAPI/Flask deployment
-* ATS dashboard UI
-* Multi-resume ranking system
-* Token cost analytics
-* Database integration
+Handles temporary API failures, timeouts, and rate limits.
 
 ---
 
-# Final Outcome
+## Cost Optimization Decisions
 
-This project demonstrates:
+- Single LLM call instead of multi-stage orchestration
+- Recommendation logic computed in Python, not the LLM
+- Resume truncated to 12,000 characters before inference
+- Structured JSON output reduces response verbosity
 
-* LLM orchestration
-* structured AI pipelines
-* prompt engineering
-* JSON output parsing
-* validation handling
-* retry mechanisms
-* production-oriented AI system design
+---
 
-using modern AI engineering practices with LangChain and Groq LLM.
+## Production Considerations
+
+| Concern | Current State | Production Fix |
+|---|---|---|
+| Scanned PDFs | Raises ValueError | Add OCR fallback |
+| Skill matching | Hardcoded prompt rules | Embeddings + cosine similarity |
+| Batch processing | Single resume per run | Queue + parallel workers |
+| PII handling | Raw resume sent to Groq | Redaction before API call |
+| Cost monitoring | Token estimate logged | Full cost tracking per run |
+
+---
+
+## Future Improvements
+
+- OCR support for scanned resumes
+- Embedding-based semantic skill matching
+- Batch resume screening
+- FastAPI or Flask deployment
+- ATS dashboard UI
+- Multi-resume ranking system
+- Database integration for results storage
